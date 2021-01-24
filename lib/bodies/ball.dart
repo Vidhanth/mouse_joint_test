@@ -11,7 +11,7 @@ class Ball extends BodyComponent {
   final double density;
   final double gravityScale;
 
-  final scale = 2.0;
+  final scale = 8.0;
 
   Ball({
     @required this.radius,

@@ -6,19 +6,17 @@ import 'package:flutter/gestures.dart';
 import 'package:forge2d/forge2d.dart';
 import 'package:mouse_joint/bodies/ball.dart';
 import 'package:mouse_joint/boundaries.dart';
-import 'package:mouse_joint/utils.dart';
 
-class JointGame extends Forge2DGame with HorizontalDragDetector {
+class JointGame extends Forge2DGame with MultiTouchDragDetector {
   final Vector2 viewportSize;
   Body groundBody;
   Ball ball;
-  Vector2 worlddelta;
   MouseJoint mouseJoint;
 
   JointGame(this.viewportSize)
       : super(
-          scale: 2.0,
-          gravity: Vector2(0, -20),
+          scale: 8.0,
+          gravity: Vector2(0, -10),
           viewportSize: viewportSize,
         ) {
     viewport.resize(viewportSize);
@@ -26,22 +24,31 @@ class JointGame extends Forge2DGame with HorizontalDragDetector {
     boundaries.forEach(add);
 
     groundBody = world.createBody(BodyDef());
-    ball = Ball(position: Vector2(0, 0), radius: 30);
+    ball = Ball(position: Vector2(0, 0), radius: 30, density: 0.3);
 
     add(ball);
-
-    MouseJointDef mouseJointDef = MouseJointDef()
-      ..maxForce = 3000
-      ..bodyA = groundBody
-      ..bodyB = ball.body;
-
-    mouseJoint = world.createJoint(mouseJointDef);
   }
 
   @override
-  void onHorizontalDragUpdate(DragUpdateDetails details) {
-    mouseJoint.setTarget(
-        getBodyPosition(details.globalPosition.toVector2(), viewportSize));
-    super.onHorizontalDragUpdate(details);
+  void onReceiveDrag(DragEvent drag) {
+    drag.onUpdate = (DragUpdateDetails details) {
+      if (mouseJoint == null) {
+        MouseJointDef mouseJointDef = MouseJointDef()
+          ..maxForce = 3000 * ball.body.mass * 10
+          ..dampingRatio = 0.3
+          ..frequencyHz = 5
+          ..bodyA = groundBody
+          ..bodyB = ball.body;
+        mouseJoint = world.createJoint(mouseJointDef);
+      }
+      mouseJoint.setTarget(
+          viewport.getScreenToWorld(details.globalPosition.toVector2()));
+    };
+    drag.onEnd = (DragEndDetails details) {
+      world.destroyJoint(mouseJoint);
+      mouseJoint.destructor();
+      mouseJoint = null;
+    };
+    super.onReceiveDrag(drag);
   }
 }
